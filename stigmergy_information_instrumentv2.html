@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stigmergy Reader — an information instrument for a foraging colony</title>
+<style>
+  :root{
+    --ink:#0b1013;          /* substrate */
+    --ink2:#111a1f;         /* panel */
+    --line:#1e2c33;
+    --amber:#e8a13c;        /* pheromone / matter layer */
+    --amber-dim:#5a4423;
+    --cyan:#49d4c4;         /* information / measurement layer */
+    --cyan-dim:#1f4f4a;
+    --coral:#e2654f;        /* entropy / disorder */
+    --text:#dbe4e6;
+    --dim:#6f8189;
+    --faint:#3f5058;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--ink);color:var(--text);
+    font-family:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+    font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .sans{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;}
+  header{padding:30px 34px 20px;border-bottom:1px solid var(--line);}
+  .kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);}
+  h1{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;font-size:25px;
+    letter-spacing:-.015em;margin:9px 0 7px;}
+  h1 .warm{color:var(--amber);} h1 .cool{color:var(--cyan);}
+  header p{margin:0;max-width:820px;color:var(--dim);font-size:12.5px;line-height:1.6;}
+  .grid{display:grid;grid-template-columns:290px 1fr 1fr;gap:0;}
+  @media(max-width:1080px){.grid{grid-template-columns:1fr;}}
+  .col{padding:22px 24px;border-right:1px solid var(--line);}
+  .col:last-child{border-right:none;}
+  h2{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;text-transform:uppercase;
+    letter-spacing:.13em;color:var(--dim);margin:0 0 16px;font-weight:600;}
+  h2 + h2{margin-top:26px;}
+  .sld{margin-bottom:20px;}
+  .sld label{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:7px;}
+  .sld label .v{color:var(--cyan);font-weight:600;font-size:13px;}
+  .sld .sub{color:var(--faint);font-size:10px;letter-spacing:.02em;margin-top:5px;display:block;line-height:1.45;}
+  input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--line);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+    background:var(--amber);cursor:pointer;border:2px solid var(--ink);}
+  input[type=range].cool::-webkit-slider-thumb{background:var(--cyan);}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--amber);
+    cursor:pointer;border:2px solid var(--ink);}
+  canvas{display:block;width:100%;background:var(--ink);border:1px solid var(--line);border-radius:3px;}
+  .readouts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+  .ro{background:var(--ink2);border:1px solid var(--line);border-radius:3px;padding:11px 13px;}
+  .ro .n{font-size:22px;font-weight:600;font-family:ui-sans-serif,system-ui,sans-serif;letter-spacing:-.02em;}
+  .ro .l{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:2px;}
+  .ro.cyan .n{color:var(--cyan);} .ro.amber .n{color:var(--amber);} .ro.coral .n{color:var(--coral);}
+  .ro .l2{font-size:9.5px;color:var(--faint);margin-top:4px;}
+  .phase-wrap{position:relative;}
+  .phase-cap{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:7px;}
+  .legend{display:flex;gap:16px;margin-top:12px;font-size:10.5px;color:var(--dim);flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .identity{margin-top:16px;padding:12px 14px;border:1px solid var(--cyan-dim);border-radius:3px;
+    background:linear-gradient(180deg,rgba(73,212,196,.05),transparent);font-size:11.5px;color:var(--text);}
+  .identity code{color:var(--cyan);font-size:12px;}
+  .scope{margin:0 34px 34px;padding:18px 22px;border:1px solid var(--line);border-radius:4px;background:var(--ink2);}
+  .scope h3{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--amber);margin:0 0 12px;}
+  .scope .two{display:grid;grid-template-columns:1fr 1fr;gap:26px;}
+  @media(max-width:760px){.scope .two{grid-template-columns:1fr;}}
+  .scope h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  .scope .ok h4{color:var(--cyan);} .scope .no h4{color:var(--coral);}
+  .scope ul{margin:0;padding-left:16px;color:var(--dim);font-size:11.5px;line-height:1.65;}
+  .scope li{margin-bottom:5px;}
+  footer{padding:20px 34px 40px;color:var(--faint);font-size:10.5px;border-top:1px solid var(--line);line-height:1.6;}
+  .regime-tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;letter-spacing:.04em;
+    text-transform:uppercase;font-weight:600;margin-left:2px;}
+  .regime-order{background:var(--cyan-dim);color:var(--cyan);}
+  .regime-crit{background:var(--amber-dim);color:var(--amber);}
+  .regime-dis{background:rgba(226,101,79,.18);color:var(--coral);}
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Stigmergy Reader · v1 · complex-systems instrument</div>
+  <h1>Reading a <span class="warm">foraging colony</span> with the tools of <span class="cool">information</span></h1>
+  <p>A stigmergic ant colony choosing between two food sources — pheromone deposited, pheromone decayed, ants recruited by what earlier ants left behind. The <span style="color:var(--amber)">amber</span> layer is the colony itself. The <span style="color:var(--cyan)">cyan</span> layer is what we can measure <em>about</em> it: how much causal structure its collective state actually carries, in bits, as it crosses from disordered search into locked-in exploitation. Every number here is computed live and validated against known limits. What this instrument does <em>not</em> claim is stated plainly at the bottom — that boundary is the point.</p>
+</header>
+
+<div class="grid">
+  <!-- controls -->
+  <div class="col">
+    <h2>Colony parameters</h2>
+    <div class="sld">
+      <label>Recruitment nonlinearity β <span class="v" id="v-beta">2.2</span></label>
+      <input type="range" id="beta" min="0.6" max="5.0" step="0.1" value="2.2">
+      <span class="sub">How sharply ants prefer the stronger trail. Low β = ants sample both sources. High β = winner-take-all lock-in.</span>
+    </div>
+    <div class="sld">
+      <label>Pheromone decay ρ <span class="v" id="v-rho">0.05</span></label>
+      <input type="range" id="rho" min="0.01" max="0.16" step="0.005" value="0.05">
+      <span class="sub">How fast trails evaporate. High decay erases the colony's memory; low decay lets one trail dominate indefinitely.</span>
+    </div>
+    <div class="sld">
+      <label>Colony size A <span class="v" id="v-size">60</span></label>
+      <input type="range" id="size" min="24" max="140" step="4" value="60" class="cool">
+      <span class="sub">Smaller colonies carry more demographic noise — their collective state jitters harder.</span>
+    </div>
+
+    <h2>Regime</h2>
+    <div id="regime-badge" style="font-size:12px;color:var(--dim);line-height:1.9;">
+      current operating point:<br><span id="regime-label" class="regime-tag regime-crit">—</span>
+    </div>
+
+    <div class="identity">
+      Every effective-information value on this page decomposes exactly as
+      <code>EI = (determinism − degeneracy) × log₂N</code>.
+      That identity is why coarse-graining a symmetric colony tends to <em>net zero</em> causal gain — the determinism a macro-view adds is cancelled by the states it throws away. It's also the crux of what this tool refuses to overclaim.
+    </div>
+  </div>
+
+  <!-- live colony -->
+  <div class="col">
+    <h2>The colony · live</h2>
+    <canvas id="colony" height="200"></canvas>
+    <div class="phase-cap"><span>source 1 ← allocation → source 2</span><span id="alloc-txt">—</span></div>
+    <div class="readouts">
+      <div class="ro amber"><div class="n" id="ro-phi">—</div><div class="l">Trail dominance</div><div class="l2">|φ₁−φ₂| / (φ₁+φ₂)</div></div>
+      <div class="ro amber"><div class="n" id="ro-switch">—</div><div class="l">Basin switches</div><div class="l2">noise-induced flips, this run</div></div>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--amber)"></span>pheromone trail strength</span>
+      <span><span class="sw" style="background:var(--cyan)"></span>committed foragers</span>
+    </div>
+  </div>
+
+  <!-- information readout -->
+  <div class="col">
+    <h2>The measurement · live</h2>
+    <div class="readouts" style="margin-top:0;">
+      <div class="ro cyan"><div class="n" id="ro-ei">—</div><div class="l">Effective information</div><div class="l2">bits of causal structure</div></div>
+      <div class="ro cyan"><div class="n" id="ro-det">—</div><div class="l">Determinism</div><div class="l2">how repeatable the next state is</div></div>
+      <div class="ro coral"><div class="n" id="ro-deg">—</div><div class="l">Degeneracy</div><div class="l2">how many paths converge</div></div>
+      <div class="ro"><div class="n" id="ro-nvis" style="color:var(--text)">—</div><div class="l">States visited</div><div class="l2">occupied micro-configurations</div></div>
+    </div>
+    <h2 style="margin-top:24px;">Order–disorder portrait</h2>
+    <div class="phase-wrap">
+      <canvas id="phase" height="210"></canvas>
+    </div>
+    <div class="phase-cap"><span>β low → high</span><span>determinism (precomputed, 5-seed mean)</span></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--cyan)"></span>ordered (high determinism)</span>
+      <span><span class="sw" style="background:var(--coral)"></span>disordered / collapsed</span>
+      <span><span class="sw" style="background:#fff;border-radius:50%"></span>your operating point</span>
+    </div>
+  </div>
+</div>
+
+<div class="scope">
+  <h3>What this instrument does and does not claim</h3>
+  <div class="two">
+    <div class="ok">
+      <h4>Validated — trust these</h4>
+      <ul>
+        <li>The effective-information core is checked against known limits: a deterministic permutation returns exactly log₂N bits; a fully random matrix returns exactly 0.</li>
+        <li>Determinism, degeneracy, and their identity <code>EI=(det−deg)·log₂N</code> hold to numerical precision.</li>
+        <li>The colony dynamics are a faithful Deneubourg recruitment model with pheromone decay and exploration noise — the order→disorder transition across β and ρ is real and reproducible.</li>
+        <li>The phase portrait is a 5-seed mean over an independent parameter sweep, not a single run.</li>
+      </ul>
+    </div>
+    <div class="no">
+      <h4>Not claimed — and why</h4>
+      <ul>
+        <li><strong>This does not measure "emergent collective intelligence."</strong> Detecting genuine <em>causal emergence</em> (macro-scale beating micro-scale) requires a validated positive control — a synthetic system known to be emergent that the pipeline correctly flags.</li>
+        <li>Under this uniform-intervention measure, symmetric collective systems tend toward exact scale-invariance: the coarse-grained view gains determinism but loses states in equal measure, netting ≈0. Building a clean positive control is harder than it looks, and until one passes, no emergence claim is honest.</li>
+        <li>So the instrument reports what it can stand behind — the information content of the colony's state at a single scale — and leaves the cross-scale claim open. That restraint is deliberate.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Stigmergic foraging ABM · Deneubourg recruitment (c + φ)^β with pheromone decay ρ and exploration fraction ε.
+  Effective information after Hoel (2013); determinism/degeneracy decomposition after Hoel &amp; Levin (2020).
+  Phase portrait precomputed over 12×12 (β,ρ) at 5 seeds each. All live measures computed in-browser from the running colony's empirical transition matrix.
+  This is a v1 research instrument, not a finding — the causal-emergence question it was built to ask remains open pending a validated positive control.
+</footer>
+
+<script>
+const REGIME = {"betas":[0.6,1.0,1.4,1.8,2.2,2.6,3.0,3.4,3.8,4.2,4.6,5.0],"rhos":[0.01,0.024,0.037,0.051,0.065,0.078,0.092,0.105,0.119,0.133,0.146,0.16],"det":[[0.6251,0.6303,0.6239,0.1264,0,0,0,0,0,0,0,0],[0.6224,0.6675,0.5991,0.1262,0,0,0,0,0,0,0,0],[0.6161,0.6962,0.5877,0.4029,0.1283,0,0,0,0,0,0,0],[0.6246,0.6579,0.6382,0.5666,0.3034,0,0,0,0,0,0,0],[0.6531,0.6678,0.6583,0.5873,0.411,0,0,0,0,0,0,0],[0.7034,0.6808,0.667,0.5931,0.5883,0.3989,0.2784,0.2777,0.2792,0.2794,0.2794,0.2794],[0.6838,0.6576,0.705,0.5969,0.5901,0.3484,0.4175,0.2831,0.282,0.284,0.2843,0.2843],[0.6759,0.66,0.7169,0.5854,0.5835,0.6167,0.4549,0.3478,0.3783,0.4158,0.4164,0.4163],[0.6872,0.6598,0.7147,0.6243,0.5305,0.639,0.6209,0.4829,0.3386,0.3685,0.3696,0.3695],[0.6587,0.6706,0.7045,0.6354,0.5401,0.6052,0.6408,0.5727,0.3399,0.3503,0.3598,0.3624],[0.6531,0.6747,0.7085,0.6534,0.5506,0.559,0.6254,0.5746,0.5651,0.6127,0.6005,0.6118],[0.654,0.6744,0.7157,0.6586,0.5634,0.5558,0.5899,0.5789,0.5754,0.5704,0.5724,0.5537]]};
+
+// ---------- live ABM (JS port) ----------
+function randn(){return Math.random();}
+function binom(n,p){let k=0;for(let i=0;i<n;i++)if(Math.random()<p)k++;return k;}
+
+class Colony{
+  constructor(){this.reset();}
+  reset(){this.n1=0;this.n2=0;this.phi1=0;this.phi2=0;this.prevBasin=0;this.switches=0;
+    this.seq=[];this.hist=[];}
+  step(A,beta,rho,c=0.3,dep=0.5,eps=0.12,churn=0.3,bx=12,bd=8){
+    this.phi1*=(1-rho);this.phi2*=(1-rho);
+    const ch=binom(A,churn);
+    let u1=0,u2=0;
+    if(this.n1+this.n2>0){const f1=this.n1/(this.n1+this.n2+1e-9);
+      u1=Math.min(this.n1,binom(ch,f1));u2=Math.min(this.n2,ch-u1);}
+    this.n1-=u1;this.n2-=u2;
+    const free=A-this.n1-this.n2;
+    const explore=binom(free,eps),recruit=free-explore;
+    const a1=Math.pow(c+this.phi1,beta),a2=Math.pow(c+this.phi2,beta);
+    const p1=a1/(a1+a2+1e-12);
+    const r1=binom(recruit,p1),r2=recruit-r1;
+    const e1=binom(explore,0.5),e2=explore-e1;
+    this.n1+=r1+e1;this.n2+=r2+e2;
+    this.phi1+=dep*this.n1/A;this.phi2+=dep*this.n2/A;
+    const x=(this.n1-this.n2)/A;
+    const d=(this.phi1-this.phi2)/(this.phi1+this.phi2+1e-9);
+    const ix=Math.max(0,Math.min(bx-1,Math.floor((x+1)/2*bx)));
+    const idd=Math.max(0,Math.min(bd-1,Math.floor((d+1)/2*bd)));
+    this.seq.push(ix*bd+idd);
+    if(this.seq.length>2500)this.seq.shift();
+    const basin=x>0.15?1:(x<-0.15?-1:0);
+    if(basin!==0&&this.prevBasin!==0&&basin!==this.prevBasin)this.switches++;
+    if(basin!==0)this.prevBasin=basin;
+    return {x,d};
+  }
+}
+
+// ---------- information measures on empirical TPM ----------
+function measures(seq){
+  const idx={},states=[];
+  for(const s of seq){if(!(s in idx)){idx[s]=states.length;states.push(s);}}
+  const N=states.length;
+  if(N<2)return{ei:0,det:0,deg:0,nvis:N};
+  const T=Array.from({length:N},()=>new Float64Array(N));
+  for(let i=0;i<seq.length-1;i++){T[idx[seq[i]]][idx[seq[i+1]]]++;}
+  for(let i=0;i<N;i++){let s=0;for(let j=0;j<N;j++)s+=T[i][j];if(s>0)for(let j=0;j<N;j++)T[i][j]/=s;else T[i][i]=1;}
+  const avg=new Float64Array(N);
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++)avg[j]+=T[i][j]/N;
+  const eps=1e-12,logN=Math.log2(N);
+  let ei=0,Hrows=0;
+  for(let i=0;i<N;i++){let kl=0,H=0;for(let j=0;j<N;j++){const p=T[i][j];
+    if(p>eps){kl+=p*Math.log2(p/Math.max(avg[j],eps));H+=-p*Math.log2(p);}}ei+=kl/N;Hrows+=H/N;}
+  const det=1-Hrows/logN;
+  let Havg=0;for(let j=0;j<N;j++){const a=Math.max(avg[j],eps);Havg+=-a*Math.log2(a);}
+  const deg=1-Havg/logN;
+  return{ei,det,deg,nvis:N};
+}
+
+// ---------- render ----------
+const colony=new Colony();
+const cc=document.getElementById('colony'),cx=cc.getContext('2d');
+const pc=document.getElementById('phase'),px=pc.getContext('2d');
+function fit(cv){const r=cv.getBoundingClientRect();cv.width=r.width*devicePixelRatio;
+  cv.height=cv.height*devicePixelRatio;cv.getContext('2d').scale(devicePixelRatio,devicePixelRatio);
+  return {w:r.width,h:cv.height/devicePixelRatio};}
+let CW,CH,PW,PH;
+function init(){const a=fit(cc);CW=a.w;CH=a.h;const b=fit(pc);PW=b.w;PH=b.h;}
+init();
+
+function drawColony(x,d){
+  cx.clearRect(0,0,CW,CH);
+  // two trails as amber bars, foragers as cyan
+  const mid=CW/2, maxphi=Math.max(colony.phi1,colony.phi2,1e-6);
+  const t1=colony.phi1/(maxphi), t2=colony.phi2/(maxphi);
+  // trail glow
+  const g1=cx.createLinearGradient(0,0,mid,0);
+  g1.addColorStop(0,`rgba(232,161,60,${0.15+0.5*t1})`);g1.addColorStop(1,'rgba(232,161,60,0.02)');
+  cx.fillStyle=g1;cx.fillRect(0,0,mid,CH);
+  const g2=cx.createLinearGradient(CW,0,mid,0);
+  g2.addColorStop(0,`rgba(232,161,60,${0.15+0.5*t2})`);g2.addColorStop(1,'rgba(232,161,60,0.02)');
+  cx.fillStyle=g2;cx.fillRect(mid,0,mid,CH);
+  // center divider
+  cx.strokeStyle='#1e2c33';cx.beginPath();cx.moveTo(mid,0);cx.lineTo(mid,CH);cx.stroke();
+  // allocation marker (cyan) — position by x
+  const ax=mid + x*(CW*0.44);
+  cx.fillStyle='#49d4c4';cx.beginPath();cx.arc(ax,CH/2,7,0,7);cx.fill();
+  cx.strokeStyle='rgba(73,212,196,.35)';cx.beginPath();cx.arc(ax,CH/2,13,0,7);cx.stroke();
+  // committed forager dots
+  const nn1=Math.round(colony.n1), nn2=Math.round(colony.n2);
+  cx.fillStyle='rgba(73,212,196,.55)';
+  for(let i=0;i<Math.min(nn1,60);i++){const rx=Math.random()*mid*0.9+mid*0.05, ry=Math.random()*CH;cx.fillRect(rx,ry,1.6,1.6);}
+  for(let i=0;i<Math.min(nn2,60);i++){const rx=mid+Math.random()*mid*0.9+mid*0.05, ry=Math.random()*CH;cx.fillRect(rx,ry,1.6,1.6);}
+  // labels
+  cx.fillStyle='#6f8189';cx.font='10px monospace';
+  cx.fillText('S1  φ='+colony.phi1.toFixed(1),8,14);
+  cx.textAlign='right';cx.fillText('φ='+colony.phi2.toFixed(1)+'  S2',CW-8,14);cx.textAlign='left';
+}
+
+// color ramp cyan(order)->amber(critical)->coral(disorder) by determinism
+function detColor(v){
+  if(v<=0)return'#161d21';
+  // v in [0,0.72]; normalize
+  const t=Math.min(1,v/0.72);
+  // low t (disorder) coral, mid amber, high cyan
+  if(t<0.5){const u=t/0.5;return mix('#e2654f','#e8a13c',u);}
+  else{const u=(t-0.5)/0.5;return mix('#e8a13c','#49d4c4',u);}
+}
+function mix(a,b,t){const pa=hx(a),pb=hx(b);
+  return`rgb(${Math.round(pa[0]+(pb[0]-pa[0])*t)},${Math.round(pa[1]+(pb[1]-pa[1])*t)},${Math.round(pa[2]+(pb[2]-pa[2])*t)})`;}
+function hx(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+
+function drawPhase(beta,rho){
+  px.clearRect(0,0,PW,PH);
+  const nb=REGIME.betas.length, nr=REGIME.rhos.length;
+  const cw=PW/nb, chh=PH/nr;
+  for(let r=0;r<nr;r++)for(let b=0;b<nb;b++){
+    px.fillStyle=detColor(REGIME.det[r][b]);
+    px.fillRect(b*cw, (nr-1-r)*chh, cw+0.5, chh+0.5);
+  }
+  // operating point
+  const bx = (beta-0.6)/(5.0-0.6)*PW;
+  const ry = (1-(rho-0.01)/(0.16-0.01))*PH;
+  px.strokeStyle='#fff';px.lineWidth=2;px.beginPath();px.arc(bx,ry,6,0,7);px.stroke();
+  px.strokeStyle='rgba(255,255,255,.4)';px.lineWidth=1;px.beginPath();px.arc(bx,ry,11,0,7);px.stroke();
+}
+
+// ---------- loop ----------
+let params={beta:2.2,rho:0.05,A:60};
+function regimeOf(det){
+  if(det>0.5)return['ORDERED — trail memory dominates','regime-order'];
+  if(det>0.25)return['CRITICAL — search meets lock-in','regime-crit'];
+  return['DISORDERED — collapsed or diffuse','regime-dis'];
+}
+function tick(){
+  const {x,d}=colony.step(params.A,params.beta,params.rho);
+  drawColony(x,d);
+  if(colony.seq.length%8===0){
+    const m=measures(colony.seq);
+    document.getElementById('ro-ei').textContent=m.ei.toFixed(2);
+    document.getElementById('ro-det').textContent=m.det.toFixed(2);
+    document.getElementById('ro-deg').textContent=m.deg.toFixed(2);
+    document.getElementById('ro-nvis').textContent=m.nvis;
+    const dom=Math.abs((colony.phi1-colony.phi2)/(colony.phi1+colony.phi2+1e-9));
+    document.getElementById('ro-phi').textContent=dom.toFixed(2);
+    document.getElementById('ro-switch').textContent=colony.switches;
+    document.getElementById('alloc-txt').textContent='x = '+x.toFixed(2);
+    const rg=regimeOf(m.det);
+    const el=document.getElementById('regime-label');el.textContent=rg[0];
+    el.className='regime-tag '+rg[1];
+  }
+  requestAnimationFrame(tick);
+}
+
+function bind(id,vid,fn){const el=document.getElementById(id),v=document.getElementById(vid);
+  el.addEventListener('input',()=>{fn(parseFloat(el.value));v.textContent=el.value;
+    colony.reset();drawPhase(params.beta,params.rho);});}
+bind('beta','v-beta',x=>params.beta=x);
+bind('rho','v-rho',x=>params.rho=x);
+bind('size','v-size',x=>params.A=x);
+
+window.addEventListener('resize',()=>{init();drawPhase(params.beta,params.rho);});
+drawPhase(params.beta,params.rho);
+tick();
+</script>
+</body>
+</html>
